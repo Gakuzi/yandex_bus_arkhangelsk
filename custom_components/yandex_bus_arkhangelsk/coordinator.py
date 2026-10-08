@@ -1,4 +1,5 @@
 """DataUpdateCoordinator for Yandex Bus Arkhangelsk."""
+import asyncio
 import json
 import logging
 import re
@@ -126,20 +127,66 @@ class YandexBusCoordinator(DataUpdateCoordinator):
         self.stop_id = extract_stop_id(stop_id)
         self.stop_name = stop_name
         self.session = async_get_clientsession(hass)
+        self._last_good: dict | None = None
+        self._consecutive_failures = 0
 
     async def _async_update_data(self) -> dict:
         url = f"https://yandex.ru/maps/20/arkhangelsk/stops/{self.stop_id}/?l=masstransit"
-        try:
-            async with async_timeout.timeout(12):
-                response = await self.session.get(url, headers=HEADERS)
-                if response.status != 200:
-                    raise UpdateFailed(f"Ошибка Яндекс.Карт: HTTP {response.status}")
-                html = await response.text()
-        except Exception as err:
-            raise UpdateFailed(f"Сетевая ошибка при запросе данных: {err}") from err
 
-        data = parse_yandex_stop_html(html, self.stop_name)
-        if data.get("stop_name"):
-            self.stop_name = data["stop_name"]
+        # Несколько попыток с коротким интервалом между ними (ретраи при сбое сети).
+        last_err: Exception | None = None
+        for attempt in range(3):
+            try:
+                async with async_timeout.timeout(12):
+                    response = await self.session.get(url, headers=HEADERS)
+                    if response.status != 200:
+                        raise UpdateFailed(f"Ошибка Яндекс.Карт: HTTP {response.status}")
+                    html = await response.text()
+            except Exception as err:  # noqa: BLE001
+                last_err = err
+                _LOGGER.warning(
+                    "yandex_bus_arkhangelsk: сетевая ошибка (попытка %s/%s): %s",
+                    attempt + 1, 3, err,
+                )
+                if attempt < 2:
+                    await asyncio.sleep(1.5 * (attempt + 1))
+                continue
 
-        return data
+            # HTTP 200, но содержательно мусор (капча/редирект/пустая страница).
+            if not html or len(html) < 500 or "Яндекс" not in html:
+                last_err = ValueError("Пустой или не-сервисный ответ Яндекс.Карт")
+                _LOGGER.warning("yandex_bus_arkhangelsk: подозрительный ответ (len=%s)", len(html))
+                if attempt < 2:
+                    await asyncio.sleep(1.5 * (attempt + 1))
+                continue
+
+            data = parse_yandex_stop_html(html, self.stop_name)
+
+            # Если подозрительно пусто (0 маршрутов) — возможно, изменилась структура
+            # или яндекс вернул не то. Не перезаписываем последние хорошие данные.
+            if not data.get("routes"):
+                _LOGGER.warning(
+                    "yandex_bus_arkhangelsk: парсер вернул пустой список маршрутов (stop %s)",
+                    self.stop_id,
+                )
+                if self._last_good:
+                    return self._last_good
+                # Нет последних данных — вернём структуру с «нет рейсов», не падаем.
+                return data
+
+            if data.get("stop_name"):
+                self.stop_name = data["stop_name"]
+
+            self._last_good = data
+            self._consecutive_failures = 0
+            return data
+
+        self._consecutive_failures += 1
+        _LOGGER.warning(
+            "yandex_bus_arkhangelsk: %s подряд неудачных опросов (stop %s)",
+            self._consecutive_failures, self.stop_id,
+        )
+        # Отдаём последние хорошие данные, если были — сенсор не «умирает».
+        if self._last_good:
+            return self._last_good
+        raise UpdateFailed(f"Ошибка запроса данных Яндекс.Карт: {last_err}")
