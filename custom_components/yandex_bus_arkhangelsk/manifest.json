@@ -1,11 +1,13 @@
 {
   "domain": "yandex_bus_arkhangelsk",
   "name": "Яндекс Транспорт (Архангельск)",
-  "codeowners": ["@Gakuzi"],
+  "codeowners": [
+    "@Gakuzi"
+  ],
   "config_flow": true,
   "documentation": "https://github.com/Gakuzi/yandex_bus_arkhangelsk",
   "integration_type": "hub",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/Gakuzi/yandex_bus_arkhangelsk/issues",
-  "version": "1.0.3"
+  "version": "1.1.0"
 }
