@@ -42,3 +42,41 @@
 2. Найдите **Яндекс Транспорт (Архангельск)**.
 3. Вставьте ссылку на остановку.
 4. На следующем шаге отметьте галочками интересующие маршруты.
+
+---
+
+## Карточка Lovelace (табло остановки)
+
+В этом репозитории есть и frontend-карточка: `www/yandex-bus-card.js` (v2). Она
+включает элементы `yandex-bus-card`, `yandex-bus-pylon-card` и визуальный редактор —
+единая замена старых разрозненных v1-карточек.
+
+Подключение на дашборде: добавьте ресурс `/local/yandex-bus-card.js` (тип `module`)
+в ресурсах дашборда, затем карточку `custom:yandex-bus-card` (или
+`custom:yandex-bus-pylon-card`) от сенсора остановки.
+
+## Установщик на Raspberry Pi
+
+`install.sh` разворачивает на Малинке (Home Assistant в Docker) и интеграцию,
+и карточку, делая бэкапы и перезапуская HA:
+
+```bash
+./install.sh pi@192.168.0.6            # конфиг HA по умолчанию ~/homeassistant
+./install.sh pi@192.168.0.6 /path/to/config
+```
+
+Если SSH-ключ не из `~/.ssh/config`, укажите его явно:
+
+```bash
+TRANSPORT_SSH_KEY=~/.ssh/id_pi_access ./install.sh pi@192.168.0.6
+```
+
+## Релизы
+
+Версия пакета — в `VERSION` и `manifest.json["version"]`. Новый релиз создаётся
+скриптом (тег `vX.Y.Z`, который видит HACS):
+
+```bash
+./scripts/release.sh 1.1.0
+git push origin main --tags
+```
