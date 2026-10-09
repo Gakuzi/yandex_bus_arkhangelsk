@@ -69,4 +69,3 @@ python3 -m py_compile custom_components/yandex_bus_arkhangelsk/*.py
 ## 7. Полезные ссылки
 
 - `CHANGELOG.md` — история изменений
-- `docs/`- спецификации (в т.ч. `photo-spec.md`, черновик)
