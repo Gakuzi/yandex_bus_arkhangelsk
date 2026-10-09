@@ -21,7 +21,7 @@ const YB_DISTRICT_MAP = [
   { id: 'krasnoflotsky',  file: 'krasnoflotsky.jpg',  words: ['краснофлот', 'остров', 'острова'], label: 'Краснофлотский' },
   { id: 'lomonosovsky',   file: 'lomonosovsky.jpg',   words: ['ломоносов', 'троицк'],           label: 'Ломоносовский' },
   { id: 'pomorskaya',     file: 'pomorskaya.jpg',     words: ['поморск', 'октябрьск'],          label: 'Октябрьский' },
-  { id: 'center',         file: 'center.jpg',         words: ['гостин', 'площадь ленина', 'набережн'], label: 'Центр' },
+  { id: 'center',         file: 'center.jpg',         words: ['гостин', 'площадь ленина'],            label: 'Центр' },
   { id: 'naberezhnaya',   file: 'naberezhnaya.jpg',   words: ['набережн', 'северн', 'речн'],     label: 'Набережная' },
   { id: 'vokzal',         file: 'vokzal.jpg',         words: ['вокзал', 'ж/д'],                 label: 'Вокзал' },
   { id: 'aeroport',       file: 'aeroport.jpg',       words: ['аэропорт', 'талаг'],             label: 'Аэропорт' },
