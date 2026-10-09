@@ -52,14 +52,9 @@ function ybRouteStatus(r, minsLeft, nextTime) {
     };
   }
 
-let stops = 0;
-  if (r.stops_left !== undefined && r.stops_left !== null) {
-    stops = parseInt(r.stops_left, 10);
-  } else if (r.stops_count !== undefined && r.stops_count !== null) {
-    stops = parseInt(r.stops_count, 10);
-  } else {
-    stops = minsLeft <= 1 ? 1 : Math.max(1, Math.round(minsLeft / 2.5));
-  }
+  // Оценка числа остановок до автобуса по времени прибытия
+  // (Яндекс не отдаёт реальное число остановок в закрытых данных).
+  let stops = minsLeft <= 1 ? 1 : Math.max(1, Math.round(minsLeft / 2.5));
   stops = Number.isFinite(stops) ? stops : 1;
 
   return {
