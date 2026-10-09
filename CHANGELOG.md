@@ -4,7 +4,7 @@
 Формат версий — [SemVer](https://semver.org/). Тег `vX.Y.Z` в HACS создаётся через
 `scripts/release.sh <версия>`.
 
-## [Unreleased]
+## [1.5.0] - 2026-10-09
 
 ### Added
 - Карточка `yandex-bus-card`: фото-шапка с местом остановки — приглушённый пейзаж
