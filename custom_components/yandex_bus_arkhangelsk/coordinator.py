@@ -82,27 +82,67 @@ def parse_yandex_stop_html(html: str, default_name: str) -> dict:
             line_id = str(t.get("lineId", ""))
             times = []
 
+            # Первая/конечная остановки и время отправления из потока (thread).
+            first_stop = None
+            last_stop = None
+            departure_time = None
+            thread_id = None
             for thread in t.get("threads", []):
+                essence = thread.get("EssentialStops", []) or []
+                for st in essence:
+                    info = st.get("info", {}) or {}
+                    if st.get("name"):
+                        if info.get("firstStop"):
+                            first_stop = st.get("name")
+                        if info.get("lastStop"):
+                            last_stop = st.get("name")
+                if not departure_time:
+                    departure_time = thread.get("BriefSchedule", {}).get("departureTime")
+                if not thread_id:
+                    thread_id = thread.get("threadId")
                 for ev in thread.get("BriefSchedule", {}).get("Events", []):
                     time_val = ev.get("Estimated", {}).get("text") or ev.get("Scheduled", {}).get("text")
                     if time_val and time_val not in times:
                         times.append(time_val)
 
-            if times:
-                next_time = times[0]
-                route_data = {
-                    "route": name,
-                    "next": next_time,
-                    "times": times[:5],
-                    "line_id": line_id,
-                    "map_url": f"https://yandex.ru/maps/20/arkhangelsk/?masstransit%5BlineId%5D={line_id}&l=masstransit",
-                }
-                routes_dict[name] = route_data
-                routes_list.append(route_data)
+            if not times and not first_stop:
+                continue
 
-                if next_time < nearest_time:
-                    nearest_time = next_time
-                    nearest_bus = f"№{name} в {next_time}"
+            next_time = times[0] if times else departure_time or ""
+
+            # Координаты центра линии из uri (ymapsbm1://transit/line?ll=lon,lat&r=радиус).
+            center_lon = ""
+            center_lat = ""
+            radius = ""
+            uri = str(t.get("uri", "") or "")
+            ll_match = re.search(r"[?&]ll=([\d.]+)%2C([\d.]+)", uri)
+            if ll_match:
+                center_lon = ll_match.group(1)
+                center_lat = ll_match.group(2)
+            r_match = re.search(r"[?&]r=([\d]+)", uri)
+            if r_match:
+                radius = r_match.group(1)
+
+            route_data = {
+                "route": name,
+                "next": next_time,
+                "times": times[:5],
+                "line_id": line_id,
+                "thread_id": thread_id or "",
+                "first_stop": first_stop or "",
+                "last_stop": last_stop or "",
+                "departure_time": departure_time or "",
+                "center_lon": center_lon,
+                "center_lat": center_lat,
+                "radius": radius,
+                "map_url": f"https://yandex.ru/maps/20/arkhangelsk/?masstransit%5BlineId%5D={line_id}&l=masstransit",
+            }
+            routes_dict[name] = route_data
+            routes_list.append(route_data)
+
+            if next_time and next_time < nearest_time:
+                nearest_time = next_time
+                nearest_bus = f"№{name} в {next_time}"
 
     routes_list.sort(key=lambda x: x["next"])
 
