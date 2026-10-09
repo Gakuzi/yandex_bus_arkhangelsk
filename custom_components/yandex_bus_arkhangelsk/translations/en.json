@@ -18,7 +18,9 @@
       }
     },
     "error": {
-      "invalid_stop_id": "Could not parse stop ID. Please enter a valid URL or number."
+      "empty_stop_id": "Please enter a stop URL or ID.",
+      "invalid_stop_id": "Could not parse stop ID. Please enter a valid URL or number.",
+      "cannot_fetch": "Could not fetch data for stop \"{stop_id}\". Check the URL and network, then try again."
     },
     "abort": {
       "already_configured": "This stop is already configured."
@@ -31,7 +33,7 @@
         "description": "Adjust tracked routes and update interval:",
         "data": {
           "tracked_routes": "Tracked routes",
-          "scan_interval": "Update interval (seconds)"
+          "scan_interval": "Update interval (seconds, min 15)"
         }
       }
     }
