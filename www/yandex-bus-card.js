@@ -290,151 +290,6 @@ const YB_COMMON_STYLE = `
     color: var(--secondary-text-color, #8b93a7);
     text-transform: uppercase;
   }
-
-  /* ---- Модальные окна (список остановок и карта) ---- */
-  .yb-modal {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: min(560px, 92vw);
-    max-height: 86vh;
-    background: var(--ha-card-background, var(--card-background-color, #1c2230));
-    color: var(--primary-text-color, #e6e9ef);
-    border-radius: 18px;
-    border: 1px solid var(--hairline-color, var(--divider-color, rgba(128,128,160,0.25)));
-    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    z-index: 1000000;
-    font-family: var(--primary-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
-  }
-  .yb-m-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--divider-color, rgba(128,128,160,0.15));
-  }
-  .yb-m-title {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 15px;
-    font-weight: 700;
-    min-width: 0;
-  }
-  .yb-m-badge {
-    flex: none;
-    min-width: 40px;
-    padding: 4px 8px;
-    border-radius: 9px;
-    color: #fff;
-    font-weight: 800;
-    font-size: 15px;
-    text-align: center;
-  }
-  .yb-m-close {
-    flex: none;
-    width: 30px; height: 30px;
-    border-radius: 50%;
-    border: none;
-    background: var(--secondary-background-color, rgba(128,128,160,0.15));
-    color: var(--primary-text-color, #e6e9ef);
-    font-size: 16px;
-    cursor: pointer;
-    line-height: 1;
-  }
-  .yb-m-close:hover { background: var(--secondary-background-color, rgba(128,128,160,0.28)); }
-  .yb-m-body {
-    padding: 16px;
-    overflow-y: auto;
-  }
-  .yb-m-stops {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-  .yb-m-stop {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 4px;
-  }
-  .yb-m-dot {
-    flex: none;
-    width: 11px; height: 11px;
-    border-radius: 50%;
-    border: 2px solid var(--card-background-color, #1c2230);
-    box-shadow: 0 0 0 2px currentColor;
-  }
-  .yb-m-stop-name {
-    flex: 1;
-    font-size: 14px;
-    font-weight: 600;
-    min-width: 0;
-  }
-  .yb-m-stop-role {
-    flex: none;
-    font-size: 11px;
-    color: var(--secondary-text-color, #8b93a7);
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-  }
-  .yb-m-line {
-    flex: none;
-    width: 2px;
-    height: 18px;
-    margin-left: 16px;
-    border-radius: 2px;
-  }
-  .yb-m-sub {
-    margin-top: 12px;
-    font-size: 13px;
-    color: var(--secondary-text-color, #8b93a7);
-  }
-  .yb-m-times { margin-top: 14px; }
-  .yb-m-times-label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-    color: var(--secondary-text-color, #8b93a7);
-    margin-bottom: 8px;
-  }
-  .yb-m-times-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-  .yb-m-time {
-    padding: 5px 10px;
-    border-radius: 9px;
-    background: var(--secondary-background-color, rgba(128,128,160,0.12));
-    font-size: 13px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-  }
-  .yb-m-map-btn {
-    margin-top: 16px;
-    width: 100%;
-    padding: 11px;
-    border: none;
-    border-radius: 12px;
-    background: var(--state-icon-color, var(--primary-color, #4f9cf9));
-    color: #fff;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-  }
-  .yb-m-map-btn:hover { filter: brightness(1.08); }
-  .yb-modal-map .yb-m-mapbody {
-    flex: 1;
-    min-height: 60vh;
-  }
-  .yb-modal-map {
-    width: min(860px, 94vw);
-  }
-  @media (max-width: 520px) {
-    .yb-modal { width: 96vw; max-height: 92vh; }
-  }
 `;
 
 // ---------------------------------------------------------------------------
@@ -668,19 +523,78 @@ class YandexBusCardBase extends HTMLElement {
       </div>`;
   }
 
-  // ---- Модальные окна (список остановок и карта автобуса) ----
-  _openRouteDetails(route) {
-    if (!window.ybModalLayer) {
-      window.ybModalLayer = document.createElement('div');
-      window.ybModalLayer.id = 'yb-modal-layer';
-      window.ybModalLayer.style.cssText = `
-        position: fixed; inset: 0; z-index: 999999;
-        background: rgba(0,0,0,0.0); pointer-events: none;
-      `;
-      document.body.appendChild(window.ybModalLayer);
-    }
-    const layer = window.ybModalLayer;
+  // ---- Модальные окна через встроенный ha-dialog Home Assistant ----
+  // ha-dialog сам затемняет фон, центрирует, закрывается по Esc/клику по фону.
 
+  _openDialog(headHtml, bodyHtml, wide) {
+    const dlg = document.createElement('ha-dialog');
+    dlg.setAttribute('open', '');
+    dlg.setAttribute('hideactions', '');
+
+    // Стили применяем inline, т.к. диалог встраивается в <body>, вне shadow DOM.
+    if (wide) dlg.style.setProperty('--ha-dialog-width', 'min(880px, 94vw)');
+    else dlg.style.setProperty('--ha-dialog-width', 'min(520px, 94vw)');
+
+    const style = document.createElement('style');
+    style.textContent = `
+      .yb-dlg {
+        font-family: var(--primary-font-family, -apple-system, "Segoe UI", Roboto, sans-serif);
+        color: var(--primary-text-color, #e6e9ef);
+      }
+      .yb-dlg-head {
+        display: flex; align-items: center; justify-content: space-between; gap: 10px;
+        padding: 4px 0 12px;
+      }
+      .yb-dlg-title { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700; }
+      .yb-dlg-badge {
+        min-width: 40px; padding: 4px 8px; border-radius: 9px; color: #fff;
+        font-weight: 800; font-size: 15px; text-align: center; flex: none;
+      }
+      .yb-dlg-stops { display: flex; flex-direction: column; gap: 2px; }
+      .yb-dlg-stop { display: flex; align-items: center; gap: 12px; padding: 9px 4px; }
+      .yb-dlg-dot { flex: none; width: 12px; height: 12px; border-radius: 50%; }
+      .yb-dlg-stop-name { flex: 1; font-size: 14px; font-weight: 600; }
+      .yb-dlg-stop-role { flex: none; font-size: 11px; color: var(--secondary-text-color, #8b93a7); text-transform: uppercase; }
+      .yb-dlg-line { flex: none; width: 2px; height: 16px; margin-left: 17px; border-radius: 2px; }
+      .yb-dlg-sub { margin-top: 12px; font-size: 13px; color: var(--secondary-text-color, #8b93a7); }
+      .yb-dlg-times { margin-top: 14px; }
+      .yb-dlg-times-label {
+        font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px;
+        color: var(--secondary-text-color, #8b93a7); margin-bottom: 8px;
+      }
+      .yb-dlg-times-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+      .yb-dlg-time {
+        padding: 5px 10px; border-radius: 9px; font-size: 13px; font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        background: var(--secondary-background-color, rgba(128,128,160,0.14));
+      }
+      .yb-dlg-mapbtn {
+        margin-top: 16px; width: 100%; padding: 11px; border: none; border-radius: 12px;
+        background: var(--state-icon-color, var(--primary-color, #4f9cf9)); color: #fff;
+        font-size: 14px; font-weight: 700; cursor: pointer;
+      }
+      .yb-dlg-mapbtn:hover { filter: brightness(1.08); }
+      .yb-dlg-mapbody { height: 62vh; min-height: 380px; }
+      .yb-dlg-mapbody iframe { width: 100%; height: 100%; border: 0; border-radius: 12px; display: block; }
+    `;
+
+    const content = document.createElement('div');
+    content.className = 'yb-dlg';
+    content.innerHTML = `${headHtml}${bodyHtml}`;
+
+    const close = () => dlg.remove();
+
+    // Кнопка закрытия в шапке (если есть .yb-dlg-close)
+    content.querySelector('.yb-dlg-close')?.addEventListener('click', close);
+    dlg.addEventListener('closed', close);
+
+    dlg.appendChild(style);
+    dlg.appendChild(content);
+    document.body.appendChild(dlg);
+    return dlg;
+  }
+
+  _openRouteDetails(route) {
     const esc = (s) => String(s == null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -695,57 +609,44 @@ class YandexBusCardBase extends HTMLElement {
     const timesHtml = (times.length ? times : [route.next])
       .filter(Boolean)
       .slice(0, 6)
-      .map((t) => `<span class="yb-m-time">${esc(t)}</span>`)
+      .map((t) => `<span class="yb-dlg-time">${esc(t)}</span>`)
       .join('');
 
     const mapUrl = route.map_url || '';
 
-    const modal = document.createElement('div');
-    modal.className = 'yb-modal';
-    modal.innerHTML = `
-      <div class="yb-m-head">
-        <div class="yb-m-title">
-          <span class="yb-m-badge" style="background:${color};">№${name}</span>
+    const head = `
+      <div class="yb-dlg-head">
+        <div class="yb-dlg-title">
+          <span class="yb-dlg-badge" style="background:${color};">№${name}</span>
           <span>Маршрут ${name}</span>
         </div>
-        <button class="yb-m-close" title="Закрыть">✕</button>
-      </div>
-      <div class="yb-m-body">
-        <div class="yb-m-stops">
-          <div class="yb-m-stop">
-            <span class="yb-m-dot start" style="background:${color};"></span>
-            <span class="yb-m-stop-name">${firstStop}</span>
-            <span class="yb-m-stop-role">начало</span>
-          </div>
-          <div class="yb-m-line" style="background:${color};"></div>
-          <div class="yb-m-stop">
-            <span class="yb-m-dot end" style="background:${color};"></span>
-            <span class="yb-m-stop-name">${lastStop}</span>
-            <span class="yb-m-stop-role">конечная</span>
-          </div>
-        </div>
-        ${dep ? `<div class="yb-m-sub">Отправление: <b>${dep}</b></div>` : ''}
-        ${timesHtml ? `<div class="yb-m-times"><div class="yb-m-times-label">Ближайшие отправления</div><div class="yb-m-times-chips">${timesHtml}</div></div>` : ''}
-        ${mapUrl ? `<button class="yb-m-map-btn">Показать на карте</button>` : ''}
+        <button class="yb-dlg-close" style="flex:none;width:30px;height:30px;border-radius:50%;border:none;background:var(--secondary-background-color,rgba(128,128,160,0.15));color:inherit;font-size:16px;cursor:pointer;">✕</button>
       </div>`;
 
-    const close = () => modal.remove();
-    modal.querySelector('.yb-m-close')?.addEventListener('click', close);
-    modal.querySelector('.yb-m-map-btn')?.addEventListener('click', (e) => {
-      e.stopPropagation();
+    const body = `
+      <div class="yb-dlg-stops">
+        <div class="yb-dlg-stop">
+          <span class="yb-dlg-dot" style="background:${color};"></span>
+          <span class="yb-dlg-stop-name">${firstStop}</span>
+          <span class="yb-dlg-stop-role">начало</span>
+        </div>
+        <div class="yb-dlg-line" style="background:${color};"></div>
+        <div class="yb-dlg-stop">
+          <span class="yb-dlg-dot" style="background:${color};"></span>
+          <span class="yb-dlg-stop-name">${lastStop}</span>
+          <span class="yb-dlg-stop-role">конечная</span>
+        </div>
+      </div>
+      ${dep ? `<div class="yb-dlg-sub">Отправление: <b>${esc(dep)}</b></div>` : ''}
+      ${timesHtml ? `<div class="yb-dlg-times"><div class="yb-dlg-times-label">Ближайшие отправления</div><div class="yb-dlg-times-chips">${timesHtml}</div></div>` : ''}
+      ${mapUrl ? `<button class="yb-dlg-mapbtn">Показать на карте</button>` : ''}`;
+
+    this._openDialog(head, body, false);
+    // Кнопку карты привязываем после создания (она в последнем созданном диалоге).
+    const dlg = document.body.querySelector('ha-dialog[open]:last-of-type, ha-dialog:last-of-type');
+    dlg?.querySelector('.yb-dlg-mapbtn')?.addEventListener('click', () => {
       this._openRouteMap(route, color);
     });
-
-    // Блокируем клики по фону (но не по самой модалке).
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) close();
-    });
-
-    layer.innerHTML = '';
-    layer.style.pointerEvents = 'auto';
-    layer.style.background = 'rgba(0,0,0,0.5)';
-    layer.onclick = (e) => { if (e.target === layer) { layer.innerHTML = ''; } };
-    layer.appendChild(modal);
   }
 
   _openRouteMap(route, color) {
@@ -755,7 +656,6 @@ class YandexBusCardBase extends HTMLElement {
     const name = esc(route.route);
     const colorSafe = color || '#4f9cf9';
 
-    // URL карты с фокусом на lineId и (если есть) координатами центра.
     let mapUrl = route.map_url || '';
     if (route.center_lon && route.center_lat) {
       const ll = `${route.center_lon}%2C${route.center_lat}`;
@@ -763,33 +663,21 @@ class YandexBusCardBase extends HTMLElement {
       mapUrl = `https://yandex.ru/maps/20/arkhangelsk/?masstransit%5BlineId%5D=${route.line_id}&ll=${ll}&z=${z}&l=masstransit`;
     }
 
-    const layer = window.ybModalLayer;
-    const mapModal = document.createElement('div');
-    mapModal.className = 'yb-modal yb-modal-map';
-    mapModal.innerHTML = `
-      <div class="yb-m-head">
-        <div class="yb-m-title">
-          <span class="yb-m-badge" style="background:${colorSafe};">№${name}</span>
+    const head = `
+      <div class="yb-dlg-head">
+        <div class="yb-dlg-title">
+          <span class="yb-dlg-badge" style="background:${colorSafe};">№${name}</span>
           <span>Автобус ${name} на карте</span>
         </div>
-        <button class="yb-m-close" title="Закрыть">✕</button>
-      </div>
-      <div class="yb-m-mapbody">
-        <iframe
-          src="${esc(mapUrl)}"
-          frameborder="0" allowfullscreen
-          style="width:100%; height:100%; border:0;"></iframe>
+        <button class="yb-dlg-close" style="flex:none;width:30px;height:30px;border-radius:50%;border:none;background:var(--secondary-background-color,rgba(128,128,160,0.15));color:inherit;font-size:16px;cursor:pointer;">✕</button>
       </div>`;
 
-    const close = () => mapModal.remove();
-    mapModal.querySelector('.yb-m-close')?.addEventListener('click', close);
-    mapModal.addEventListener('click', (e) => { if (e.target === mapModal) close(); });
+    const body = `
+      <div class="yb-dlg-mapbody">
+        <iframe src="${esc(mapUrl)}" allowfullscreen></iframe>
+      </div>`;
 
-    layer.innerHTML = '';
-    layer.style.pointerEvents = 'auto';
-    layer.style.background = 'rgba(0,0,0,0.5)';
-    layer.onclick = (e) => { if (e.target === layer) { layer.innerHTML = ''; } };
-    layer.appendChild(mapModal);
+    this._openDialog(head, body, true);
   }
 
   // Делегирование кликов по строкам маршрутов внутри карточки.
