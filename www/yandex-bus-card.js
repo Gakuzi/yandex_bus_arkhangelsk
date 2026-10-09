@@ -568,14 +568,14 @@ class YandexBusCardBase extends HTMLElement {
         font-variant-numeric: tabular-nums;
         background: var(--secondary-background-color, rgba(128,128,160,0.14));
       }
-      .yb-dlg-mapbtn {
-        margin-top: 16px; width: 100%; padding: 11px; border: none; border-radius: 12px;
-        background: var(--state-icon-color, var(--primary-color, #4f9cf9)); color: #fff;
-        font-size: 14px; font-weight: 700; cursor: pointer;
+      .yb-dlg-eta {
+        display: flex; flex-direction: column; gap: 4px;
+        margin-top: 14px; padding: 10px 12px; border-radius: 10px;
+        background: var(--state-icon-color, var(--primary-color, #4f9cf9))22;
+        border: 1px solid var(--divider-color, rgba(128,128,160,0.15));
       }
-      .yb-dlg-mapbtn:hover { filter: brightness(1.08); }
-      .yb-dlg-mapbody { height: 62vh; min-height: 380px; }
-      .yb-dlg-mapbody iframe { width: 100%; height: 100%; border: 0; border-radius: 12px; display: block; }
+      .yb-dlg-eta-item { font-size: 13px; }
+      .yb-dlg-eta-item b { font-weight: 800; }
     `;
 
     const content = document.createElement('div');
@@ -612,7 +612,29 @@ class YandexBusCardBase extends HTMLElement {
       .map((t) => `<span class="yb-dlg-time">${esc(t)}</span>`)
       .join('');
 
-    const mapUrl = route.map_url || '';
+    // Сколько минут до ближайшего автобуса в этом маршруте (для нашей остановки).
+    const nextTime = route.next || (Array.isArray(route.times) && route.times[0]) || '';
+    let minsLeft = 0;
+    if (nextTime && String(nextTime).includes(':')) {
+      const [h, m] = String(nextTime).split(':').map(Number);
+      const now = new Date();
+      let diff = (h * 60 + m) - (now.getHours() * 60 + now.getMinutes());
+      if (diff < 0) diff += 1440;
+      minsLeft = diff;
+    }
+
+    // Оценка числа остановок до ближайшего автобуса (как в исходной карточке).
+    let stopsLeft = null;
+    if (route.stops_left !== undefined && route.stops_left !== null) {
+      stopsLeft = parseInt(route.stops_left, 10);
+    } else if (route.stops_count !== undefined && route.stops_count !== null) {
+      stopsLeft = parseInt(route.stops_count, 10);
+    } else if (minsLeft > 0) {
+      stopsLeft = Math.max(1, Math.round(minsLeft / 2.5));
+    }
+    const stopsText = stopsLeft !== null
+      ? `${stopsLeft} ${ybPluralize(stopsLeft, 'остановка', 'остановки', 'остановок')}`
+      : '';
 
     const head = `
       <div class="yb-dlg-head">
@@ -637,47 +659,14 @@ class YandexBusCardBase extends HTMLElement {
           <span class="yb-dlg-stop-role">конечная</span>
         </div>
       </div>
-      ${dep ? `<div class="yb-dlg-sub">Отправление: <b>${esc(dep)}</b></div>` : ''}
-      ${timesHtml ? `<div class="yb-dlg-times"><div class="yb-dlg-times-label">Ближайшие отправления</div><div class="yb-dlg-times-chips">${timesHtml}</div></div>` : ''}
-      ${mapUrl ? `<button class="yb-dlg-mapbtn">Показать на карте</button>` : ''}`;
+      <div class="yb-dlg-eta">
+        ${nextTime ? `<span class="yb-dlg-eta-item"><b>${esc(nextTime)}</b> — ближайший автобус</span>` : ''}
+        ${stopsText ? `<span class="yb-dlg-eta-item">до него ~<b>${stopsText}</b></span>` : ''}
+      </div>
+      ${dep ? `<div class="yb-dlg-sub">Первый рейс маршрута: <b>${esc(dep)}</b></div>` : ''}
+      ${timesHtml ? `<div class="yb-dlg-times"><div class="yb-dlg-times-label">Ближайшие отправления</div><div class="yb-dlg-times-chips">${timesHtml}</div></div>` : ''}`;
 
     this._openDialog(head, body, false);
-    // Кнопку карты привязываем после создания (она в последнем созданном диалоге).
-    const dlg = document.body.querySelector('ha-dialog[open]:last-of-type, ha-dialog:last-of-type');
-    dlg?.querySelector('.yb-dlg-mapbtn')?.addEventListener('click', () => {
-      this._openRouteMap(route, color);
-    });
-  }
-
-  _openRouteMap(route, color) {
-    const esc = (s) => String(s == null ? '' : s)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-    const name = esc(route.route);
-    const colorSafe = color || '#4f9cf9';
-
-    let mapUrl = route.map_url || '';
-    if (route.center_lon && route.center_lat) {
-      const ll = `${route.center_lon}%2C${route.center_lat}`;
-      const z = route.radius ? (route.radius <= 4000 ? 13 : route.radius <= 8000 ? 12 : 11) : 12;
-      mapUrl = `https://yandex.ru/maps/20/arkhangelsk/?masstransit%5BlineId%5D=${route.line_id}&ll=${ll}&z=${z}&l=masstransit`;
-    }
-
-    const head = `
-      <div class="yb-dlg-head">
-        <div class="yb-dlg-title">
-          <span class="yb-dlg-badge" style="background:${colorSafe};">№${name}</span>
-          <span>Автобус ${name} на карте</span>
-        </div>
-        <button class="yb-dlg-close" style="flex:none;width:30px;height:30px;border-radius:50%;border:none;background:var(--secondary-background-color,rgba(128,128,160,0.15));color:inherit;font-size:16px;cursor:pointer;">✕</button>
-      </div>`;
-
-    const body = `
-      <div class="yb-dlg-mapbody">
-        <iframe src="${esc(mapUrl)}" allowfullscreen></iframe>
-      </div>`;
-
-    this._openDialog(head, body, true);
   }
 
   // Делегирование кликов по строкам маршрутов внутри карточки.
