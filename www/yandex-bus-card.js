@@ -52,9 +52,14 @@ function ybRouteStatus(r, minsLeft, nextTime) {
     };
   }
 
-  // Оценка числа остановок до автобуса по времени прибытия
-  // (Яндекс не отдаёт реальное число остановок в закрытых данных).
-  let stops = minsLeft <= 1 ? 1 : Math.max(1, Math.round(minsLeft / 2.5));
+let stops = 0;
+  if (r.stops_left !== undefined && r.stops_left !== null) {
+    stops = parseInt(r.stops_left, 10);
+  } else if (r.stops_count !== undefined && r.stops_count !== null) {
+    stops = parseInt(r.stops_count, 10);
+  } else {
+    stops = minsLeft <= 1 ? 1 : Math.max(1, Math.round(minsLeft / 2.5));
+  }
   stops = Number.isFinite(stops) ? stops : 1;
 
   return {
@@ -454,7 +459,7 @@ class YandexBusCardBase extends HTMLElement {
     return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
-  // Фото-заглушка места: по названию остановки подбираем пейзаж района/города.
+// Фото-заглушка места: по названию остановки подбираем пейзаж района/города.
   // Если модуль photos.js не подключён как ресурс — пытаемся загрузить динамически.
   _loadPhotoModule() {
     if (window.ybMatchDistrict && window.ybPlacePhotoUrl) return true;
@@ -523,7 +528,7 @@ class YandexBusCardBase extends HTMLElement {
       ? `https://yandex.ru/maps/20/arkhangelsk/?masstransit%5BstopId%5D=stop__${stopId}&l=masstransit`
       : 'https://yandex.ru/maps/20/arkhangelsk/?l=masstransit';
 
-    return { stopName, stopId, routes, mapStopUrl, placePhoto: this._placePhoto(stopName) };
+return { stopName, stopId, routes, mapStopUrl, placePhoto: this._placePhoto(stopName) };
   }
 
   _cardWidth() {
@@ -554,8 +559,7 @@ class YandexBusCardBase extends HTMLElement {
     // Визуальный прогресс автобуса по пути к остановке.
     let progress = 92 - (minsLeft * 4.2);
     progress = Math.max(14, Math.min(88, progress));
-
-    const numHtml = status.far
+const numHtml = status.far
       ? `class="yb-route-num-wrap far"><span class="yb-num">${route.route}</span>`
       : `class="yb-route-num-wrap" style="--yb-accent:${outerColor}; --yb-accent-shadow:${outerColor}55;"><span class="yb-num">${route.route}</span>`;
 
@@ -837,7 +841,7 @@ class YandexBusCard extends YandexBusCardBase {
       return;
     }
 
-    const ph = data.placePhoto || {};
+const ph = data.placePhoto || {};
     const heroBg = ph.url ? `style="background-image:url('${ph.url}')"` : '';
     const header = `
       <div class="yb-hero ${ph.url ? '' : 'yb-hero-grad'}" ${heroBg}>
