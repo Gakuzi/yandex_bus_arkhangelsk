@@ -52,14 +52,9 @@ function ybRouteStatus(r, minsLeft, nextTime) {
     };
   }
 
-  let stops = 0;
-  if (r.stops_left !== undefined && r.stops_left !== null) {
-    stops = parseInt(r.stops_left, 10);
-  } else if (r.stops_count !== undefined && r.stops_count !== null) {
-    stops = parseInt(r.stops_count, 10);
-  } else {
-    stops = minsLeft <= 1 ? 1 : Math.max(1, Math.round(minsLeft / 2.5));
-  }
+  // Оценка числа остановок до автобуса по времени прибытия
+  // (Яндекс не отдаёт реальное число остановок в закрытых данных).
+  let stops = minsLeft <= 1 ? 1 : Math.max(1, Math.round(minsLeft / 2.5));
   stops = Number.isFinite(stops) ? stops : 1;
 
   return {
@@ -490,9 +485,6 @@ class YandexBusCardBase extends HTMLElement {
     let progress = 92 - (minsLeft * 4.2);
     progress = Math.max(14, Math.min(88, progress));
 
-    const busUrl = route.map_url
-      || `https://yandex.ru/maps/20/arkhangelsk/?text=автобус%20${encodeURIComponent(route.route)}&l=masstransit`;
-
     const numHtml = status.far
       ? `class="yb-route-num-wrap far"><span class="yb-num">${route.route}</span>`
       : `class="yb-route-num-wrap" style="--yb-accent:${outerColor}; --yb-accent-shadow:${outerColor}55;"><span class="yb-num">${route.route}</span>`;
@@ -623,15 +615,9 @@ class YandexBusCardBase extends HTMLElement {
       minsLeft = diff;
     }
 
-    // Оценка числа остановок до ближайшего автобуса (как в исходной карточке).
-    let stopsLeft = null;
-    if (route.stops_left !== undefined && route.stops_left !== null) {
-      stopsLeft = parseInt(route.stops_left, 10);
-    } else if (route.stops_count !== undefined && route.stops_count !== null) {
-      stopsLeft = parseInt(route.stops_count, 10);
-    } else if (minsLeft > 0) {
-      stopsLeft = Math.max(1, Math.round(minsLeft / 2.5));
-    }
+    // Оценка числа остановок до ближайшего автобуса по времени прибытия
+    // (Яндекс не отдаёт реальное число остановок в закрытых данных).
+    const stopsLeft = minsLeft > 0 ? Math.max(1, Math.round(minsLeft / 2.5)) : null;
     const stopsText = stopsLeft !== null
       ? `${stopsLeft} ${ybPluralize(stopsLeft, 'остановка', 'остановки', 'остановок')}`
       : '';

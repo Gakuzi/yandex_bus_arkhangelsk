@@ -110,19 +110,6 @@ def parse_yandex_stop_html(html: str, default_name: str) -> dict:
 
             next_time = times[0] if times else departure_time or ""
 
-            # Координаты центра линии из uri (ymapsbm1://transit/line?ll=lon,lat&r=радиус).
-            center_lon = ""
-            center_lat = ""
-            radius = ""
-            uri = str(t.get("uri", "") or "")
-            ll_match = re.search(r"[?&]ll=([\d.]+)%2C([\d.]+)", uri)
-            if ll_match:
-                center_lon = ll_match.group(1)
-                center_lat = ll_match.group(2)
-            r_match = re.search(r"[?&]r=([\d]+)", uri)
-            if r_match:
-                radius = r_match.group(1)
-
             route_data = {
                 "route": name,
                 "next": next_time,
@@ -132,9 +119,6 @@ def parse_yandex_stop_html(html: str, default_name: str) -> dict:
                 "first_stop": first_stop or "",
                 "last_stop": last_stop or "",
                 "departure_time": departure_time or "",
-                "center_lon": center_lon,
-                "center_lat": center_lat,
-                "radius": radius,
                 "map_url": f"https://yandex.ru/maps/20/arkhangelsk/?masstransit%5BlineId%5D={line_id}&l=masstransit",
             }
             routes_dict[name] = route_data
