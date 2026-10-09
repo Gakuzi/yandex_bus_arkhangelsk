@@ -92,6 +92,43 @@ const YB_COMMON_STYLE = `
     padding: 14px 16px;
   }
   .yb-card.slim { padding: 10px 14px; }
+  /* Шапка с фото места (пейзаж района/города) */
+  .yb-hero {
+    position: relative;
+    margin: -14px -16px 12px;
+    padding: 14px 16px 34px;
+    background-color: #1c2434;
+    background-size: cover;
+    background-position: center;
+    filter: saturate(0.9);
+  }
+  .yb-hero-grad { background: linear-gradient(180deg, #313c52, #1c2434); }
+  .yb-hero-shade {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(10,12,18,0.10), rgba(10,12,18,0.45) 55%, rgba(10,12,18,0.86));
+    pointer-events: none;
+  }
+  .yb-hero .yb-header, .yb-hero .yb-stop-title, .yb-hero .yb-clock {
+    position: relative; z-index: 1;
+  }
+  .yb-hero .yb-stop-title { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+  .yb-hero .yb-stop-title ha-icon { color: rgba(255,255,255,0.8); }
+  .yb-hero .yb-clock { color: rgba(255,255,255,0.9); }
+  .yb-hero-label {
+    position: absolute; left: 16px; bottom: 10px; z-index: 1;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase;
+    color: rgba(255,255,255,0.92);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    display: inline-flex; align-items: center; gap: 5px;
+    max-width: calc(100% - 32px);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .yb-hero-label::before {
+    content: "";
+    width: 6px; height: 6px; border-radius: 50%; flex: none;
+    background: var(--state-icon-color, var(--primary-color, #4f9cf9));
+    box-shadow: 0 0 6px var(--state-icon-color, #4f9cf9);
+  }
   .yb-header, .yb-top {
     display: flex;
     align-items: center;
@@ -404,6 +441,8 @@ class YandexBusCardBase extends HTMLElement {
     root.appendChild(this._inner);
     this.appendChild(root);
     this._root = root;
+    // Пытаемся подгрузить модуль фото-заглушек мест (если не подключён ресурсом).
+    this._loadPhotoModule();
     // Живые часы.
     this._clockTimer = setInterval(() => {
       const el = this.querySelector('[data-yb-clock]');
@@ -413,6 +452,37 @@ class YandexBusCardBase extends HTMLElement {
 
   _nowTime() {
     return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // Фото-заглушка места: по названию остановки подбираем пейзаж района/города.
+  // Если модуль photos.js не подключён как ресурс — пытаемся загрузить динамически.
+  _loadPhotoModule() {
+    if (window.ybMatchDistrict && window.ybPlacePhotoUrl) return true;
+    try {
+      const s = document.createElement('script');
+      s.type = 'module';
+      s.src = '/local/yandex_bus_arkhangelsk/photos/photos.js';
+      (document.head || document.documentElement).appendChild(s);
+    } catch (e) { /* тихий фолбэк на градиент */ }
+    return false;
+  }
+
+  // Определяем URL фото-заглушки и подпись места.
+  _placePhoto(stopName) {
+    const config = this._config || {};
+    const distOverride = config.district_override || '';
+    // Своё фото из конфига — приоритет.
+    if (config.photo_mode === 'custom' && config.photo) {
+      return { url: config.photo, label: (config.photo_label || ''), custom: true };
+    }
+    // Фото-заглушка по району/городу.
+    if (window.ybPlacePhotoUrl) {
+      const url = window.ybPlacePhotoUrl(stopName, distOverride);
+      const m = window.ybMatchDistrict(distOverride || stopName);
+      const label = (m && m.label) || 'Архангельск';
+      return { url, label, custom: false };
+    }
+    return { url: '', label: '', custom: false };
   }
 
   // Собираем данные остановки: имя, маршруты, фильтр, ссылка на карту.
@@ -453,7 +523,7 @@ class YandexBusCardBase extends HTMLElement {
       ? `https://yandex.ru/maps/20/arkhangelsk/?masstransit%5BstopId%5D=stop__${stopId}&l=masstransit`
       : 'https://yandex.ru/maps/20/arkhangelsk/?l=masstransit';
 
-    return { stopName, stopId, routes, mapStopUrl };
+    return { stopName, stopId, routes, mapStopUrl, placePhoto: this._placePhoto(stopName) };
   }
 
   _cardWidth() {
@@ -530,25 +600,75 @@ class YandexBusCardBase extends HTMLElement {
     const style = document.createElement('style');
     style.textContent = `
       .yb-dlg {
-        font-family: var(--primary-font-family, -apple-system, "Segoe UI", Roboto, sans-serif);
+        --yb-dlg-radius: 18px;
         color: var(--primary-text-color, #e6e9ef);
+        font-family: var(--primary-font-family, -apple-system, "Segoe UI", Roboto, sans-serif);
+        overflow: hidden;
+        border-radius: var(--yb-dlg-radius);
       }
-      .yb-dlg-head {
-        display: flex; align-items: center; justify-content: space-between; gap: 10px;
-        padding: 4px 0 12px;
+      /* Фото-шапка */
+      .yb-dlg-hero {
+        position: relative;
+        height: 132px;
+        background: linear-gradient(180deg, #2a3348, #171d2a);
+        background-size: cover;
+        background-position: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        padding: 12px 16px 14px;
       }
-      .yb-dlg-title { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700; }
+      .yb-dlg-hero-shade {
+        position: absolute; inset: 0;
+        background: linear-gradient(180deg, rgba(10,12,18,0.05), rgba(10,12,18,0.55) 60%, rgba(10,12,18,0.88));
+        pointer-events: none;
+      }
+      .yb-dlg-close {
+        position: absolute; top: 10px; right: 10px;
+        z-index: 2;
+        width: 30px; height: 30px; border-radius: 50%;
+        border: none; cursor: pointer; font-size: 15px; line-height: 1;
+        color: #fff;
+        background: rgba(15,23,42,0.35);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        transition: background 0.15s;
+      }
+      .yb-dlg-close:hover { background: rgba(15,23,42,0.55); }
       .yb-dlg-badge {
-        min-width: 40px; padding: 4px 8px; border-radius: 9px; color: #fff;
-        font-weight: 800; font-size: 15px; text-align: center; flex: none;
+        position: relative; z-index: 1;
+        align-self: flex-start;
+        min-width: 48px; padding: 5px 10px; border-radius: 11px;
+        color: #fff; font-weight: 800; font-size: 17px; text-align: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.25);
       }
+      .yb-dlg-title {
+        position: relative; z-index: 1;
+        margin-top: 8px;
+        font-size: 19px; font-weight: 800; letter-spacing: -0.3px; line-height: 1.15;
+        color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+      }
+      .yb-dlg-sub {
+        position: relative; z-index: 1;
+        font-size: 11.5px; color: rgba(255,255,255,0.8); margin-top: 2px;
+      }
+      .yb-dlg-body { padding: 14px 16px 16px; }
+
       .yb-dlg-stops { display: flex; flex-direction: column; gap: 2px; }
-      .yb-dlg-stop { display: flex; align-items: center; gap: 12px; padding: 9px 4px; }
-      .yb-dlg-dot { flex: none; width: 12px; height: 12px; border-radius: 50%; }
-      .yb-dlg-stop-name { flex: 1; font-size: 14px; font-weight: 600; }
-      .yb-dlg-stop-role { flex: none; font-size: 11px; color: var(--secondary-text-color, #8b93a7); text-transform: uppercase; }
-      .yb-dlg-line { flex: none; width: 2px; height: 16px; margin-left: 17px; border-radius: 2px; }
-      .yb-dlg-sub { margin-top: 12px; font-size: 13px; color: var(--secondary-text-color, #8b93a7); }
+      .yb-dlg-stop { display: flex; align-items: center; gap: 12px; padding: 8px 4px; }
+      .yb-dlg-dot { flex: none; width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 0 0 3px var(--card-background-color, rgba(128,128,160,0.06)); }
+      .yb-dlg-stop-name { flex: 1; font-size: 14px; font-weight: 700; }
+      .yb-dlg-stop-role { flex: none; font-size: 10.5px; color: var(--secondary-text-color, #8b93a7); text-transform: uppercase; letter-spacing: 0.3px; }
+      .yb-dlg-line { flex: none; width: 2px; height: 16px; margin-left: 17px; border-radius: 2px; opacity: 0.75; }
+      .yb-dlg-sub-line { margin-top: 12px; font-size: 13px; color: var(--secondary-text-color, #8b93a7); }
+      .yb-dlg-eta {
+        display: flex; flex-direction: column; gap: 5px;
+        margin-top: 14px; padding: 11px 13px; border-radius: 12px;
+        background: var(--state-icon-color, var(--primary-color, #4f9cf9))1f;
+        border: 1px solid var(--divider-color, rgba(128,128,160,0.15));
+      }
+      .yb-dlg-eta-item { font-size: 13.5px; }
+      .yb-dlg-eta-item b { font-weight: 800; }
       .yb-dlg-times { margin-top: 14px; }
       .yb-dlg-times-label {
         font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px;
@@ -560,14 +680,17 @@ class YandexBusCardBase extends HTMLElement {
         font-variant-numeric: tabular-nums;
         background: var(--secondary-background-color, rgba(128,128,160,0.14));
       }
-      .yb-dlg-eta {
-        display: flex; flex-direction: column; gap: 4px;
-        margin-top: 14px; padding: 10px 12px; border-radius: 10px;
-        background: var(--state-icon-color, var(--primary-color, #4f9cf9))22;
-        border: 1px solid var(--divider-color, rgba(128,128,160,0.15));
+      .yb-dlg-map {
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        margin-top: 16px; padding: 11px 14px; border-radius: 12px;
+        background: var(--primary-color, #4f9cf9);
+        color: var(--text-primary-color, #fff);
+        font-size: 13.5px; font-weight: 700; text-decoration: none;
+        transition: filter 0.15s, transform 0.1s;
       }
-      .yb-dlg-eta-item { font-size: 13px; }
-      .yb-dlg-eta-item b { font-weight: 800; }
+      .yb-dlg-map:hover { filter: brightness(1.08); }
+      .yb-dlg-map:active { transform: scale(0.98); }
+      .yb-dlg-map ha-icon { --mdc-icon-size: 18px; }
     `;
 
     const content = document.createElement('div');
@@ -586,7 +709,7 @@ class YandexBusCardBase extends HTMLElement {
     return dlg;
   }
 
-  _openRouteDetails(route) {
+  _openRouteDetails(route, stopCtx) {
     const esc = (s) => String(s == null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -597,6 +720,16 @@ class YandexBusCardBase extends HTMLElement {
     const dep = esc(route.departure_time || '');
     const times = Array.isArray(route.times) ? route.times : [];
     const color = this._routeColors[String(route.route)] || '#4f9cf9';
+
+    // Ссылка на маршрут на Яндекс.Картах (из данных маршрута или по умолчанию).
+    const routeUrl = esc(route.map_url
+      || `https://yandex.ru/maps/20/arkhangelsk/?text=автобус%20${encodeURIComponent(route.route)}&l=masstransit`);
+
+    // Фото-шапка: своё фото из конфига, либо градиент-заглушка с названием остановки.
+    const ctx = stopCtx || {};
+    const photo = (this._config && this._config.photo_mode === 'custom' && this._config.photo)
+      ? `url('${this._config.photo}') center/cover`
+      : '';
 
     const timesHtml = (times.length ? times : [route.next])
       .filter(Boolean)
@@ -623,34 +756,40 @@ class YandexBusCardBase extends HTMLElement {
       : '';
 
     const head = `
-      <div class="yb-dlg-head">
-        <div class="yb-dlg-title">
-          <span class="yb-dlg-badge" style="background:${color};">№${name}</span>
-          <span>Маршрут ${name}</span>
-        </div>
-        <button class="yb-dlg-close" style="flex:none;width:30px;height:30px;border-radius:50%;border:none;background:var(--secondary-background-color,rgba(128,128,160,0.15));color:inherit;font-size:16px;cursor:pointer;">✕</button>
+      <div class="yb-dlg-hero" style="${photo ? `background-image:${photo};` : (ctx.placePhoto && ctx.placePhoto.url ? `background-image:url('${ctx.placePhoto.url}');` : '')}">
+        <div class="yb-dlg-hero-shade"></div>
+        <button class="yb-dlg-close" aria-label="Закрыть">✕</button>
+        <div class="yb-dlg-badge" style="background:${color};">№${name}</div>
+        <div class="yb-dlg-title">Маршрут ${name}</div>
+        <div class="yb-dlg-sub">${ctx.stopName ? esc(ctx.stopName) : 'Остановка'}${ctx.placePhoto && ctx.placePhoto.label ? ` · ${esc(ctx.placePhoto.label)}` : ''}</div>
       </div>`;
 
     const body = `
-      <div class="yb-dlg-stops">
-        <div class="yb-dlg-stop">
-          <span class="yb-dlg-dot" style="background:${color};"></span>
-          <span class="yb-dlg-stop-name">${firstStop}</span>
-          <span class="yb-dlg-stop-role">начало</span>
+      <div class="yb-dlg-body">
+        <div class="yb-dlg-stops">
+          <div class="yb-dlg-stop">
+            <span class="yb-dlg-dot" style="background:${color};"></span>
+            <span class="yb-dlg-stop-name">${firstStop}</span>
+            <span class="yb-dlg-stop-role">начало</span>
+          </div>
+          <div class="yb-dlg-line" style="background:${color};"></div>
+          <div class="yb-dlg-stop">
+            <span class="yb-dlg-dot" style="background:${color};"></span>
+            <span class="yb-dlg-stop-name">${lastStop}</span>
+            <span class="yb-dlg-stop-role">конечная</span>
+          </div>
         </div>
-        <div class="yb-dlg-line" style="background:${color};"></div>
-        <div class="yb-dlg-stop">
-          <span class="yb-dlg-dot" style="background:${color};"></span>
-          <span class="yb-dlg-stop-name">${lastStop}</span>
-          <span class="yb-dlg-stop-role">конечная</span>
+        <div class="yb-dlg-eta">
+          ${nextTime ? `<span class="yb-dlg-eta-item"><b>${esc(nextTime)}</b> — ближайший автобус</span>` : ''}
+          ${stopsText ? `<span class="yb-dlg-eta-item">до него ~<b>${stopsText}</b></span>` : ''}
         </div>
-      </div>
-      <div class="yb-dlg-eta">
-        ${nextTime ? `<span class="yb-dlg-eta-item"><b>${esc(nextTime)}</b> — ближайший автобус</span>` : ''}
-        ${stopsText ? `<span class="yb-dlg-eta-item">до него ~<b>${stopsText}</b></span>` : ''}
-      </div>
-      ${dep ? `<div class="yb-dlg-sub">Первый рейс маршрута: <b>${esc(dep)}</b></div>` : ''}
-      ${timesHtml ? `<div class="yb-dlg-times"><div class="yb-dlg-times-label">Ближайшие отправления</div><div class="yb-dlg-times-chips">${timesHtml}</div></div>` : ''}`;
+        ${dep ? `<div class="yb-dlg-sub-line">Первый рейс маршрута: <b>${esc(dep)}</b></div>` : ''}
+        ${timesHtml ? `<div class="yb-dlg-times"><div class="yb-dlg-times-label">Ближайшие отправления</div><div class="yb-dlg-times-chips">${timesHtml}</div></div>` : ''}
+        <a class="yb-dlg-map" href="${routeUrl}" target="_blank" rel="noopener">
+          <ha-icon icon="mdi:map-marker-radius"></ha-icon>
+          <span>Открыть на Яндекс.Картах</span>
+        </a>
+      </div>`;
 
     this._openDialog(head, body, false);
   }
@@ -667,7 +806,7 @@ class YandexBusCardBase extends HTMLElement {
       el.onclick = (ev) => {
         ev.stopPropagation();
         const route = map.get(decodeURIComponent(el.dataset.route));
-        if (route) this._openRouteDetails(route);
+        if (route) this._openRouteDetails(route, data);
       };
     });
   }
@@ -698,16 +837,22 @@ class YandexBusCard extends YandexBusCardBase {
       return;
     }
 
+    const ph = data.placePhoto || {};
+    const heroBg = ph.url ? `style="background-image:url('${ph.url}')"` : '';
     const header = `
-      <div class="yb-header">
-        <div class="yb-stop-title" onclick="window.open('${data.mapStopUrl}','_blank')">
-          <ha-icon icon="mdi:bus-stop"></ha-icon>
-          <span class="yb-title-text">${data.stopName}</span>
+      <div class="yb-hero ${ph.url ? '' : 'yb-hero-grad'}" ${heroBg}>
+        <div class="yb-hero-shade"></div>
+        <div class="yb-header">
+          <div class="yb-stop-title" onclick="window.open('${data.mapStopUrl}','_blank')">
+            <ha-icon icon="mdi:bus-stop"></ha-icon>
+            <span class="yb-title-text">${data.stopName}</span>
+          </div>
+          <div class="yb-clock">
+            <span class="yb-live-dot"></span>
+            <span data-yb-clock>${this._nowTime()}</span>
+          </div>
         </div>
-        <div class="yb-clock">
-          <span class="yb-live-dot"></span>
-          <span data-yb-clock>${this._nowTime()}</span>
-        </div>
+        ${ph.label ? `<div class="yb-hero-label" title="Место остановки">${ph.label}</div>` : ''}
       </div>`;
 
     const rows = data.routes.map((r) => this._routeRow(r));
