@@ -72,12 +72,12 @@ function ybRouteStatus(r, minsLeft, nextTime) {
 
 // Мягкая палитра акцентов, читаемая и на тёмном, и на светлом фоне.
 const YB_ROUTE_COLORS = [
-  '#4f9cf9', // синий
-  '#38b29a', // бирюзовый
-  '#f0a14a', // тёплый оранжевый
-  '#b087f5', // фиолетовый
-  '#ef7c8e', // розово-красный
-  '#8fc560', // зелёный
+  '#3b82f6', // синий
+  '#0e9488', // бирюзовый
+  '#e5732a', // тёплый оранжевый
+  '#8b5cf6', // фиолетовый
+  '#e14b6a', // розово-красный
+  '#65a30d', // зелёный
 ];
 
 // Класс общих стилей, одинаковых для обеих карточек.
@@ -195,6 +195,7 @@ const YB_COMMON_STYLE = `
     font-weight: 800;
     letter-spacing: -0.5px;
   }
+  .yb-route-num-wrap .yb-num { line-height: 1; }
   .yb-route-num-wrap.far {
     background: var(--secondary-background-color, rgba(128,128,160,0.25));
     box-shadow: none;
@@ -493,8 +494,8 @@ class YandexBusCardBase extends HTMLElement {
       || `https://yandex.ru/maps/20/arkhangelsk/?text=автобус%20${encodeURIComponent(route.route)}&l=masstransit`;
 
     const numHtml = status.far
-      ? `class="yb-route-num-wrap far">${route.route}`
-      : `class="yb-route-num-wrap" style="--yb-accent:${outerColor}; --yb-accent-shadow:${outerColor}55;">${route.route}`;
+      ? `class="yb-route-num-wrap far"><span class="yb-num">${route.route}</span>`
+      : `class="yb-route-num-wrap" style="--yb-accent:${outerColor}; --yb-accent-shadow:${outerColor}55;"><span class="yb-num">${route.route}</span>`;
 
     const trackHtml = status.far ? '' : `
       <div class="yb-track">
