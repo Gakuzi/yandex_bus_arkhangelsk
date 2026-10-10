@@ -1,0 +1,43 @@
+[project]
+name = "yandex-bus-arkhangelsk"
+version = "1.5.0"
+description = "Home Assistant integration and Lovelace card for public transport in Arkhangelsk"
+requires-python = ">=3.12"
+
+[tool.ruff]
+# Срез: чистые функции без зависимостей Home Assistant.
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "B", "UP"]
+ignore = ["B008"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.coverage.run]
+source = ["custom_components/yandex_bus_arkhangelsk"]
+omit = [
+    "custom_components/yandex_bus_arkhangelsk/__init__.py",
+    "custom_components/yandex_bus_arkhangelsk/const.py",
+    "custom_components/yandex_bus_arkhangelsk/config_flow.py",
+    "custom_components/yandex_bus_arkhangelsk/sensor.py",
+    "custom_components/yandex_bus_arkhangelsk/brand/*",
+]
+
+[tool.coverage.report]
+# Порог только для исполняемого среза (coordinator.py: extract_stop_id/parse_yandex_stop_html).
+# HA-зависимый код (config_flow, sensor, __init__) в покрытии не учитывается.
+fail_under = 85
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]

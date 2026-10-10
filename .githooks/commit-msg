@@ -1,0 +1,22 @@
+#!/usr/bin/env sh
+# commit-msg — требует Conventional Commits: type(scope): description.
+# Примеры: feat(card): ..., fix(sensor): ..., docs: ..., chore: ..., release: v1.5.0
+set -e
+
+MSG_FILE="$1"
+MSG=$(cat "$MSG_FILE")
+
+# Позволяем merge/revert-коммитам git (они генерятся сами).
+case "$MSG" in
+    "Merge "*) exit 0 ;;
+    "Revert "*) exit 0 ;;
+esac
+
+if ! printf '%s' "$MSG" | grep -E '^(feat|fix|docs|chore|refactor|test|ci|perf|build|style|release)(\([a-z0-9_-]+\))?:\s+.+$' >/dev/null; then
+    echo "commit-msg: сообщение не соответствует Conventional Commits." >&2
+    echo "Ожидается: 'type(scope): описание', где type ∈ {feat, fix, docs, chore, refactor, test, ci, perf, build, style, release}." >&2
+    echo "Примеры: 'feat(card): добавить фото-шапку', 'fix(sensor): поправить парсинг', 'docs: обновить README'." >&2
+    exit 1
+fi
+
+exit 0

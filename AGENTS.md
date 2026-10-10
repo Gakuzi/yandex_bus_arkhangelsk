@@ -48,6 +48,10 @@ Home Assistant-интеграция **`yandex_bus_arkhangelsk`** — отсле�
 | `install.sh`, `scripts/remote_install.sh` | Установка на Raspberry Pi |
 | `scripts/release.sh` | Выпуск релиза (v-tag) |
 | `.github/workflows/{hacs,hassfest}.yml` | Валидация HACS |
+| `pyproject.toml` | Ruff + pytest-cov конфиг, порог покрытия |
+| `tests/test_parser.py`, `tests/conftest.py` | Офлайн-юнит-тесты парсера (стабы HA) |
+| `.githooks/`, `scripts/install_hooks.sh` | Локальные ворота качества (pre-commit, pre-merge, commit-msg) |
+| `.github/workflows/tests.yml` | CI: ruff + pytest + coverage + утечки секретов |
 
 ## 5. Проверка перед сдачей
 
@@ -58,6 +62,31 @@ python3 -m py_compile custom_components/yandex_bus_arkhangelsk/*.py
 # frontend не обращается к несуществующим атрибутам сенсора
 # при изменении UI — обновлён README + CHANGELOG
 ```
+
+### 5.1 Тест-ворота качества (запуск и порог)
+
+Инфраструктура тестов формализована в `pyproject.toml` (ruff + pytest-cov) и
+блокируется git-hooks (`./.githooks/`) + CI (`tests.yml`).
+
+```bash
+# включить локальные ворота (один раз, после клона)
+sh scripts/install_hooks.sh          # git config core.hooksPath .githooks
+
+# ручной прогон (как в hook/CI)
+.venv/bin/python -m ruff check . --output-format=concise
+.venv/bin/python -m pytest tests \
+  --cov=custom_components/yandex_bus_arkhangelsk \
+  --cov-report=term --cov-fail-under=85
+```
+
+- **Порог покрытия: 85% на исполняемый срез.** В покрытие НЕ входят HA-зависимые
+  модули (`__init__.py`, `config_flow.py`, `sensor.py`, `const.py`, `brand/`) и
+  класс `YandexBusCoordinator` (`# pragma: no cover`) — их тестирование требует
+  live-HA и вне юнит-среза.
+- **Юнит-тесты** (`tests/test_parser.py`) офлайн, стабы HA в `tests/conftest.py`,
+  импортируют только чистые функции `parse_yandex_stop_html`/`extract_stop_id`.
+- Ворота блокируют и локальный коммит/мерж, и слияние в PR (CI `tests.yml`).
+  Обход хука (`--no-verify`) — только в крайнем случае и по явной причине.
 
 ## 6. Архитектурные решения (вкратце)
 

@@ -4,6 +4,15 @@
 Формат версий — [SemVer](https://semver.org/). Тег `vX.Y.Z` в HACS создаётся через
 `scripts/release.sh <версия>`.
 
+## [Unreleased]
+
+### Changed
+- Формализованы ворота качества: `pyproject.toml` (ruff + pytest-cov, порог 85% на
+  исполняемый срез), `tests/test_parser.py` + `tests/conftest.py` (офлайн-юнит-тесты
+  парсера со стабами HA), `.githooks/` (pre-commit, pre-merge-commit, commit-msg) и
+  `scripts/install_hooks.sh`. Добавлен CI `tests.yml` (ruff + pytest + coverage +
+  утечки секретов). README и AGENTS.md дополнены инструкциями по запуску.
+
 ## [1.5.0] - 2026-10-09
 
 ### Added

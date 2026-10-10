@@ -1,0 +1,45 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff pytest pytest-cov coverage
+
+      - name: Ruff lint
+        run: ruff check . --output-format=concise
+
+      - name: Pytest + coverage (executable slice)
+        run: |
+          pytest tests \
+            --cov=custom_components/yandex_bus_arkhangelsk \
+            --cov-report=term \
+            --cov-report=xml \
+            --cov-fail-under=85
+
+      - name: Scan for secret leaks in tracked files
+        run: |
+          # Ищем реальные утечки (присвоение значения), исключая легитимные тех.упоминания.
+          if grep -rnEi "(api[_-]?key|secret|passwd|token|password)[[:space:]]*[=:][[:space:]]*['\"][^'\"]+" \
+              --include="*.py" --include="*.json" --include="*.yml" --include="*.yaml" . \
+              | grep -vE "\.githooks/|\.github/workflows/|tests/|pyproject\.toml" ; then
+            echo "Найдены подозрительные секреты в репозитории." >&2
+            exit 1
+          fi

@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+# pre-merge-commit — блокирует merge без зелёных тестов/покрытия (ворота качества).
+set -e
+cd "$(git rev-parse --show-toplevel)"
+
+PY=python3
+if [ -x ".venv/Scripts/python.exe" ]; then
+    PY=".venv/Scripts/python.exe"
+elif [ -x ".venv/bin/python" ]; then
+    PY=".venv/bin/python"
+fi
+
+echo ":: pre-merge-commit: ruff"
+"$PY" -m ruff check . --output-format=concise
+
+echo ":: pre-merge-commit: pytest + coverage"
+"$PY" -m pytest tests --cov=custom_components/yandex_bus_arkhangelsk --cov-report=term --cov-fail-under=85
+
+echo ":: pre-merge-commit: OK"

@@ -168,7 +168,9 @@ class YandexBusOptionsFlow(config_entries.OptionsFlow):
             return self.async_create_entry(title="", data=user_input)
 
         coordinator = self.hass.data[DOMAIN].get(self.config_entry.entry_id)
-        current_data = self.config_entry.options if self.config_entry.options else self.config_entry.data
+        current_data = (
+            self.config_entry.options if self.config_entry.options else self.config_entry.data
+        )
 
         current_routes = current_data.get(CONF_TRACKED_ROUTES, [])
         scan_interval = current_data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)

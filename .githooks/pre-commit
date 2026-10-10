@@ -1,0 +1,32 @@
+#!/usr/bin/env sh
+# pre-commit — блокирует коммит, если не проходят ruff, pytest/покрытие или утечка секретов.
+# Для Windows-разработки: ищет python в .venv, иначе полагается на PATH.
+set -e
+cd "$(git rev-parse --show-toplevel)"
+
+PY=python3
+if [ -x ".venv/Scripts/python.exe" ]; then
+    PY=".venv/Scripts/python.exe"
+elif [ -x ".venv/bin/python" ]; then
+    PY=".venv/bin/python"
+fi
+
+echo ":: pre-commit: ruff"
+"$PY" -m ruff check . --output-format=concise
+
+echo ":: pre-commit: pytest + coverage"
+"$PY" -m pytest tests --cov=custom_components/yandex_bus_arkhangelsk --cov-report=term --cov-fail-under=85
+
+echo ":: pre-commit: поиск утечек секретов (только присвоения значений)"
+# Ищем реальные утечки: присвоение непустого значения секретоподобной переменной.
+# Исключаем легитимные упоминания: сами хуки/CI (технические имена), тесты и пайплайн grep.
+SECRET_HITS=$(git diff --cached --name-only -z | xargs -0 -I{} cat "{}" 2>/dev/null \
+    | grep -nEi "(api[_-]?key|secret|passwd|token|password)[[:space:]]*[=:][[:space:]]*['\"][^'\"]+" \
+    | grep -vE "\.githooks/|\.github/|tests/|pyproject\.toml" || true)
+if [ -n "$SECRET_HITS" ]; then
+    echo "Подозрительно похоже на утечку секретов в staging:" >&2
+    echo "$SECRET_HITS" >&2
+    exit 1
+fi
+
+echo ":: pre-commit: OK"

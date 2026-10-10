@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import DEFAULT_SCAN_INTERVAL, DOMAIN
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -101,7 +101,9 @@ def parse_yandex_stop_html(html: str, default_name: str) -> dict:
                 if not thread_id:
                     thread_id = thread.get("threadId")
                 for ev in thread.get("BriefSchedule", {}).get("Events", []):
-                    time_val = ev.get("Estimated", {}).get("text") or ev.get("Scheduled", {}).get("text")
+                    time_val = ev.get("Estimated", {}).get("text") or ev.get(
+                        "Scheduled", {}
+                    ).get("text")
                     if time_val and time_val not in times:
                         times.append(time_val)
 
@@ -138,10 +140,12 @@ def parse_yandex_stop_html(html: str, default_name: str) -> dict:
     }
 
 
-class YandexBusCoordinator(DataUpdateCoordinator):
+class YandexBusCoordinator(DataUpdateCoordinator):  # pragma: no cover
     """Координатор опроса Яндекс.Карт без блокировки потоков."""
 
-    def __init__(self, hass: HomeAssistant, stop_id: str, stop_name: str, scan_interval: int) -> None:
+    def __init__(
+        self, hass: HomeAssistant, stop_id: str, stop_name: str, scan_interval: int
+    ) -> None:
         super().__init__(
             hass,
             _LOGGER,

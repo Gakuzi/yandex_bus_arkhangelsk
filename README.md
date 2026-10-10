@@ -113,7 +113,7 @@ TRANSPORT_SSH_KEY=~/.ssh/id_pi_access ./install.sh pi@192.168.0.6
 
 ## Релизы
 
-Версия пакета — в `VERSION` и `manifest.json["version"]` (актуально: **1.4.3**).
+Версия пакета — в `VERSION` и `manifest.json["version"]` (актуально: **1.5.0**).
 Новый релиз создаётся скриптом (тег `vX.Y.Z`, который видит HACS):
 
 ```bash
@@ -122,6 +122,30 @@ git push origin main --tags
 ```
 
 История изменений — в [`CHANGELOG.md`](CHANGELOG.md).
+
+## Разработка и тесты
+
+Для работы с репозиторием (линг, юнит-тесты, ворота качества) используется
+Python 3.12 + `pytest`, `pytest-cov`, `ruff` (конфиг в [`pyproject.toml`](pyproject.toml)).
+
+```bash
+# установка зависимостей и включение git-hooks (ворота коммита/мержа)
+python -m venv .venv && .venv/bin/python -m pip install -U ruff pytest pytest-cov
+sh scripts/install_hooks.sh
+
+# ручной прогон тех же проверок, что в CI
+.venv/bin/python -m ruff check . --output-format=concise
+.venv/bin/python -m pytest tests \
+  --cov=custom_components/yandex_bus_arkhangelsk \
+  --cov-report=term --cov-fail-under=85
+```
+
+- **Юнит-тесты** покрывают чистые функции парсера (`parse_yandex_stop_html`,
+  `extract_stop_id`) без сети и без установленного HA — стабы в `tests/conftest.py`.
+- **Порог покрытия 85%** применяется к исполняемому срезу; HA-зависимые модули
+  (`config_flow`, `sensor`, `__init__`) исключены прагмами/конфигом (см. `AGENTS.md`).
+- Гейты блокируют: локально — `pre-commit`/`pre-merge-commit` (ruff + pytest +
+  утечки секретов), `commit-msg` (Conventional Commits); на GitHub — CI `tests.yml`.
 
 ## Документация
 

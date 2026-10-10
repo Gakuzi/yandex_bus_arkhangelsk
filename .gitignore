@@ -8,6 +8,9 @@ env/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
 
 # OS / редакторы
 .DS_Store
