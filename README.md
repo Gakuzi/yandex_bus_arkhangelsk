@@ -113,7 +113,7 @@ TRANSPORT_SSH_KEY=~/.ssh/id_pi_access ./install.sh pi@192.168.0.6
 
 ## Релизы
 
-Версия пакета — в `VERSION` и `manifest.json["version"]` (актуально: **1.5.0**).
+Версия пакета — в `VERSION` и `manifest.json["version"]` (актуально: **1.6.0**).
 Новый релиз создаётся скриптом (тег `vX.Y.Z`, который видит HACS):
 
 ```bash

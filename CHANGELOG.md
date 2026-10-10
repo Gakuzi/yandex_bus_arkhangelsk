@@ -4,7 +4,7 @@
 Формат версий — [SemVer](https://semver.org/). Тег `vX.Y.Z` в HACS создаётся через
 `scripts/release.sh <версия>`.
 
-## [Unreleased]
+## [1.6.0] - 2026-10-10
 
 ### Changed
 - Формализованы ворота качества: `pyproject.toml` (ruff + pytest-cov, порог 85% на
@@ -12,6 +12,16 @@
   парсера со стабами HA), `.githooks/` (pre-commit, pre-merge-commit, commit-msg) и
   `scripts/install_hooks.sh`. Добавлен CI `tests.yml` (ruff + pytest + coverage +
   утечки секретов). README и AGENTS.md дополнены инструкциями по запуску.
+
+### Added
+- Карточка `yandex-bus-card`: фото-шапка с местом остановки — приглушённый пейзаж
+  района/города подставляется автоматически по названию остановки.
+- Встроенный набор фото-заглушек мест Архангельска: `www/yandex_bus_arkhangelsk/photos/`
+  (15 пейзажей + фолбэк города) и модуль-маппинг `photos.js` (ключевые слова → район).
+- Настройки фото в редакторе карточки: `photo_mode` (`auto`/`custom`), `photo`,
+  `photo_label`, `district_override`.
+- Модальное окно деталей маршрута получило фото-шапку места и кнопку
+  «Открыть на Яндекс.Картах».
 
 ## [1.5.0] - 2026-10-09
 
