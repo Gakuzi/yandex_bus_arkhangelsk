@@ -20,15 +20,6 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS = ["sensor"]
 
 
-async def async_setup(hass: HomeAssistant, config: dict) -> bool:
-    """Глобальная инициализация интеграции: регистрация статики и карточки."""
-    hass.data.setdefault(DOMAIN, {})
-    if "card_registered" not in hass.data[DOMAIN]:
-        await async_register_card_resources(hass)
-        hass.data[DOMAIN]["card_registered"] = True
-    return True
-
-
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Инициализация интеграции из конфига."""
     hass.data.setdefault(DOMAIN, {})
