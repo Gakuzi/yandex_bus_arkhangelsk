@@ -19,7 +19,7 @@ HOST="${1:-}"
 HA_CONFIG="${2:-homeassistant}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SRC_INT="$SCRIPT_DIR/custom_components/yandex_bus_arkhangelsk"
-SRC_CARD="$SCRIPT_DIR/www/yandex-bus-card.js"
+SRC_CARD="$SCRIPT_DIR/custom_components/yandex_bus_arkhangelsk/www/yandex-bus-card.js"
 REMOTE_SCRIPT="$SCRIPT_DIR/scripts/remote_install.sh"
 VERSION="$(cat "$SCRIPT_DIR/VERSION" 2>/dev/null || echo unknown)"
 

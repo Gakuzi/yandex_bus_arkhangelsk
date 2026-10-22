@@ -461,7 +461,9 @@ class YandexBusCardBase extends HTMLElement {
     try {
       const s = document.createElement('script');
       s.type = 'module';
-      s.src = '/local/yandex_bus_arkhangelsk/photos/photos.js';
+      s.src = (typeof window !== 'undefined' && window.YB_PHOTOS_BASE)
+        ? `${window.YB_PHOTOS_BASE}photos.js`
+        : '/yandex_bus_arkhangelsk/photos/photos.js';
       (document.head || document.documentElement).appendChild(s);
     } catch (e) { /* тихий фолбэк на градиент */ }
     return false;

@@ -4,6 +4,15 @@
 Формат версий — [SemVer](https://semver.org/). Тег `vX.Y.Z` в HACS создаётся через
 `scripts/release.sh <версия>`.
 
+## [1.7.0] - 2026-10-22
+
+### Added
+- Lovelace-карточка `yandex-bus-card` и встроенные фотографии упакованы внутрь интеграции (`custom_components/yandex_bus_arkhangelsk/www/`).
+- Автоматическая регистрация статического пути интеграции и ресурса дашборда Lovelace при инициализации компонента.
+
+### Fixed
+- Исправлен `OptionsFlow` (`config_flow.py`) для актуальных версий Home Assistant: убран `__init__`, используется наследуемый `self.config_entry`.
+
 ## [1.6.0] - 2026-10-10
 
 ### Changed
