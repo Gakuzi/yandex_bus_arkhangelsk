@@ -23,6 +23,24 @@ function esc(s) {
     .replace(/'/g, '&#39;');
 }
 
+// Проверка валидности цвета (#rgb, #rrggbb, #rrggbbaa) для безопасной вставки в стили.
+function safeColor(c) {
+  if (typeof c === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(c.trim())) {
+    return c.trim();
+  }
+  return '#4f9cf9';
+}
+
+// Безопасный URL для CSS background-image (защита от выхода из кавычек и injection).
+function safeCssUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  const clean = encodeURI(url).replace(/'/g, '%27').replace(/"/g, '%22');
+  if (/^(https?:\/\/|\/)/i.test(clean)) {
+    return clean;
+  }
+  return '';
+}
+
 // Минут до ближайшего времени "HH:MM" (с учётом перехода через полночь).
 function ybMinutesUntil(timeStr) {
   if (!timeStr || !String(timeStr).includes(':')) return 0;
@@ -440,8 +458,26 @@ class YandexBusCardBase extends HTMLElement {
     this.updateView();
   }
 
+  connectedCallback() {
+    if (this._root && !this._clockTimer) {
+      this._clockTimer = setInterval(() => {
+        const el = this.querySelector('[data-yb-clock]');
+        if (el) el.textContent = this._nowTime();
+      }, 1000);
+    }
+  }
+
   disconnectedCallback() {
-    if (this._clockTimer) clearInterval(this._clockTimer);
+    if (this._clockTimer) {
+      clearInterval(this._clockTimer);
+      this._clockTimer = null;
+    }
+  }
+
+  getCardSize() {
+    const data = this._collect();
+    const count = (data && Array.isArray(data.routes)) ? data.routes.length : 1;
+    return Math.max(2, Math.min(12, Math.ceil(count * 1.2) + 1));
   }
 
   _mount() {
@@ -523,11 +559,12 @@ class YandexBusCardBase extends HTMLElement {
     }
 
     // Стабильная палитра: цвет маршрута не меняется при обновлении.
-    if (!this._routeColors) this._routeColors = {};
+    if (!this._routeColors) this._routeColors = Object.create(null);
     const allRoutes = Array.isArray(attrs.routes) ? attrs.routes : routes;
     allRoutes.forEach((r, i) => {
-      if (!(r.route in this._routeColors)) {
-        this._routeColors[String(r.route)] = YB_ROUTE_COLORS[i % YB_ROUTE_COLORS.length];
+      const rKey = String(r.route);
+      if (!Object.prototype.hasOwnProperty.call(this._routeColors, rKey)) {
+        this._routeColors[rKey] = YB_ROUTE_COLORS[i % YB_ROUTE_COLORS.length];
       }
     });
 
@@ -560,7 +597,7 @@ return { stopName, stopId, routes, mapStopUrl, placePhoto: this._placePhoto(stop
   // ---- Инвариантная разметка строки маршрута ----
   _routeRow(route) {
     const routeName = esc(route.route);
-    const outerColor = this._routeColors[String(route.route)] || '#4f9cf9';
+    const outerColor = safeColor(this._routeColors[String(route.route)] || '#4f9cf9');
     const nextTime = route.next || (Array.isArray(route.times) && route.times[0]) || '--:--';
     const minsLeft = ybMinutesUntil(nextTime);
     const status = ybRouteStatus(route, minsLeft, nextTime);
@@ -729,18 +766,24 @@ return { stopName, stopId, routes, mapStopUrl, placePhoto: this._placePhoto(stop
     const lastStop = esc(route.last_stop || '—');
     const dep = esc(route.departure_time || '');
     const times = Array.isArray(route.times) ? route.times : [];
-    const color = this._routeColors[String(route.route)] || '#4f9cf9';
+    const color = safeColor(this._routeColors[String(route.route)] || '#4f9cf9');
 
     // Ссылка на маршрут на Яндекс.Картах (из данных маршрута или по умолчанию).
-    const routeUrl = esc(route.map_url
-      || `https://yandex.ru/maps/20/arkhangelsk/?text=автобус%20${encodeURIComponent(route.route)}&l=masstransit`);
+    const rawMapUrl = route.map_url
+      || `https://yandex.ru/maps/20/arkhangelsk/?text=автобус%20${encodeURIComponent(route.route)}&l=masstransit`;
+    const routeUrl = (rawMapUrl.startsWith('https://') || rawMapUrl.startsWith('http://'))
+      ? esc(rawMapUrl)
+      : 'https://yandex.ru/maps/20/arkhangelsk/?l=masstransit';
 
     // Фото-шапка: своё фото из конфига, либо градиент-заглушка с названием остановки.
     const ctx = stopCtx || {};
-    const photo = (this._config && this._config.photo_mode === 'custom' && this._config.photo)
-      ? `url('${encodeURI(this._config.photo)}') center/cover`
+    const customPhotoUrl = (this._config && this._config.photo_mode === 'custom' && this._config.photo)
+      ? safeCssUrl(this._config.photo)
       : '';
-    const safeHeroPhotoUrl = ctx.placePhoto && ctx.placePhoto.url ? encodeURI(ctx.placePhoto.url) : '';
+    const safeHeroPhotoUrl = ctx.placePhoto && ctx.placePhoto.url ? safeCssUrl(ctx.placePhoto.url) : '';
+    const heroBgStyle = customPhotoUrl
+      ? `background-image:url('${customPhotoUrl}'); background-position:center; background-size:cover;`
+      : (safeHeroPhotoUrl ? `background-image:url('${safeHeroPhotoUrl}');` : '');
 
     const timesHtml = (times.length ? times : [route.next])
       .filter(Boolean)
@@ -767,7 +810,7 @@ return { stopName, stopId, routes, mapStopUrl, placePhoto: this._placePhoto(stop
       : '';
 
     const head = `
-      <div class="yb-dlg-hero" style="${photo ? `background-image:${photo};` : (safeHeroPhotoUrl ? `background-image:url('${safeHeroPhotoUrl}');` : '')}">
+      <div class="yb-dlg-hero" style="${heroBgStyle}">
         <div class="yb-dlg-hero-shade"></div>
         <button class="yb-dlg-close" aria-label="Закрыть">✕</button>
         <div class="yb-dlg-badge" style="background:${color};">№${name}</div>
@@ -830,7 +873,9 @@ return { stopName, stopId, routes, mapStopUrl, placePhoto: this._placePhoto(stop
       el.onclick = (ev) => {
         ev.stopPropagation();
         const url = el.getAttribute('data-map-url');
-        if (url) window.open(url, '_blank', 'noopener,noreferrer');
+        if (url && (url.startsWith('https://') || url.startsWith('http://'))) {
+          window.open(url, '_blank', 'noopener,noreferrer');
+        }
       };
     }
   }
@@ -862,7 +907,7 @@ class YandexBusCard extends YandexBusCardBase {
     }
 
     const ph = data.placePhoto || {};
-    const safeHeroUrl = ph.url ? encodeURI(ph.url) : '';
+    const safeHeroUrl = ph.url ? safeCssUrl(ph.url) : '';
     const heroBg = safeHeroUrl ? `style="background-image:url('${safeHeroUrl}')"` : '';
     const safeMapStopUrl = esc(data.mapStopUrl || '');
     const safeStopName = esc(data.stopName);

@@ -5,7 +5,6 @@ import logging
 import re
 from datetime import timedelta
 
-import async_timeout
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -130,7 +129,7 @@ def parse_yandex_stop_html(html: str, default_name: str) -> dict:
                 nearest_time = next_time
                 nearest_bus = f"№{name} в {next_time}"
 
-    routes_list.sort(key=lambda x: x["next"])
+    routes_list.sort(key=lambda x: (1 if not x.get("next") else 0, x.get("next", "")))
 
     return {
         "stop_name": parsed_name,
@@ -165,7 +164,7 @@ class YandexBusCoordinator(DataUpdateCoordinator):  # pragma: no cover
         last_err: Exception | None = None
         for attempt in range(3):
             try:
-                async with async_timeout.timeout(12):
+                async with asyncio.timeout(12):
                     response = await self.session.get(url, headers=HEADERS)
                     if response.status != 200:
                         raise UpdateFailed(f"Ошибка Яндекс.Карт: HTTP {response.status}")

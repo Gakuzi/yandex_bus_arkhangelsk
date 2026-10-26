@@ -69,7 +69,8 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
 async def async_register_card_resources(hass: HomeAssistant) -> None:
     """Регистрируем статический путь и ресурс карточки для Lovelace."""
     www_dir = Path(__file__).parent / "www"
-    if not www_dir.is_dir():
+    is_dir = await hass.async_add_executor_job(www_dir.is_dir)
+    if not is_dir:
         return
 
     url_base = f"/{DOMAIN}"
