@@ -13,6 +13,16 @@
 // Общие утилиты
 // ---------------------------------------------------------------------------
 
+// Безопасное экранирование HTML-символов для защиты от XSS.
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // Минут до ближайшего времени "HH:MM" (с учётом перехода через полночь).
 function ybMinutesUntil(timeStr) {
   if (!timeStr || !String(timeStr).includes(':')) return 0;
@@ -530,7 +540,7 @@ return { stopName, stopId, routes, mapStopUrl, placePhoto: this._placePhoto(stop
 
   _cardWidth() {
     const config = this._config || {};
-    return config.card_width ? `width: ${config.card_width}; margin: 0 auto;` : '';
+    return config.card_width ? `width: ${esc(config.card_width)}; margin: 0 auto;` : '';
   }
 
   _renderShell(headerHtml, listHtml) {
@@ -549,16 +559,19 @@ return { stopName, stopId, routes, mapStopUrl, placePhoto: this._placePhoto(stop
 
   // ---- Инвариантная разметка строки маршрута ----
   _routeRow(route) {
+    const routeName = esc(route.route);
     const outerColor = this._routeColors[String(route.route)] || '#4f9cf9';
     const nextTime = route.next || (Array.isArray(route.times) && route.times[0]) || '--:--';
     const minsLeft = ybMinutesUntil(nextTime);
     const status = ybRouteStatus(route, minsLeft, nextTime);
+    const statusTime = esc(status.time);
+    const statusNote = esc(status.note);
     // Визуальный прогресс автобуса по пути к остановке.
     let progress = 92 - (minsLeft * 4.2);
     progress = Math.max(14, Math.min(88, progress));
-const numHtml = status.far
-      ? `class="yb-route-num-wrap far"><span class="yb-num">${route.route}</span>`
-      : `class="yb-route-num-wrap" style="--yb-accent:${outerColor}; --yb-accent-shadow:${outerColor}55;"><span class="yb-num">${route.route}</span>`;
+    const numHtml = status.far
+      ? `class="yb-route-num-wrap far"><span class="yb-num">${routeName}</span>`
+      : `class="yb-route-num-wrap" style="--yb-accent:${outerColor}; --yb-accent-shadow:${outerColor}55;"><span class="yb-num">${routeName}</span>`;
 
     const trackHtml = status.far ? '' : `
       <div class="yb-track">
@@ -576,11 +589,11 @@ const numHtml = status.far
         <div ${numHtml}</div>
         <div class="yb-route-body">
           <div class="yb-route-meta">
-            <span class="yb-route-label">Автобус №${route.route}</span>
-            <span class="yb-route-time ${status.far ? 'far' : ''}">${status.time}</span>
+            <span class="yb-route-label">Автобус №${routeName}</span>
+            <span class="yb-route-time ${status.far ? 'far' : ''}">${statusTime}</span>
           </div>
           ${status.far
-            ? `<div class="yb-note"><ha-icon icon="mdi:moon-waning-crescent"></ha-icon><span>${status.note}</span></div>`
+            ? `<div class="yb-note"><ha-icon icon="mdi:moon-waning-crescent"></ha-icon><span>${statusNote}</span></div>`
             : trackHtml}
         </div>
       </div>`;
@@ -711,10 +724,6 @@ const numHtml = status.far
   }
 
   _openRouteDetails(route, stopCtx) {
-    const esc = (s) => String(s == null ? '' : s)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-
     const name = esc(route.route);
     const firstStop = esc(route.first_stop || '—');
     const lastStop = esc(route.last_stop || '—');
@@ -729,8 +738,9 @@ const numHtml = status.far
     // Фото-шапка: своё фото из конфига, либо градиент-заглушка с названием остановки.
     const ctx = stopCtx || {};
     const photo = (this._config && this._config.photo_mode === 'custom' && this._config.photo)
-      ? `url('${this._config.photo}') center/cover`
+      ? `url('${encodeURI(this._config.photo)}') center/cover`
       : '';
+    const safeHeroPhotoUrl = ctx.placePhoto && ctx.placePhoto.url ? encodeURI(ctx.placePhoto.url) : '';
 
     const timesHtml = (times.length ? times : [route.next])
       .filter(Boolean)
@@ -757,7 +767,7 @@ const numHtml = status.far
       : '';
 
     const head = `
-      <div class="yb-dlg-hero" style="${photo ? `background-image:${photo};` : (ctx.placePhoto && ctx.placePhoto.url ? `background-image:url('${ctx.placePhoto.url}');` : '')}">
+      <div class="yb-dlg-hero" style="${photo ? `background-image:${photo};` : (safeHeroPhotoUrl ? `background-image:url('${safeHeroPhotoUrl}');` : '')}">
         <div class="yb-dlg-hero-shade"></div>
         <button class="yb-dlg-close" aria-label="Закрыть">✕</button>
         <div class="yb-dlg-badge" style="background:${color};">№${name}</div>
@@ -782,7 +792,7 @@ const numHtml = status.far
         </div>
         <div class="yb-dlg-eta">
           ${nextTime ? `<span class="yb-dlg-eta-item"><b>${esc(nextTime)}</b> — ближайший автобус</span>` : ''}
-          ${stopsText ? `<span class="yb-dlg-eta-item">до него ~<b>${stopsText}</b></span>` : ''}
+          ${stopsText ? `<span class="yb-dlg-eta-item">до него ~<b>${esc(stopsText)}</b></span>` : ''}
         </div>
         ${dep ? `<div class="yb-dlg-sub-line">Первый рейс маршрута: <b>${esc(dep)}</b></div>` : ''}
         ${timesHtml ? `<div class="yb-dlg-times"><div class="yb-dlg-times-label">Ближайшие отправления</div><div class="yb-dlg-times-chips">${timesHtml}</div></div>` : ''}
@@ -811,6 +821,19 @@ const numHtml = status.far
       };
     });
   }
+
+  _bindStopTitleClick() {
+    const root = this._root;
+    if (!root) return;
+    const el = root.querySelector('.yb-stop-title[data-map-url]');
+    if (el) {
+      el.onclick = (ev) => {
+        ev.stopPropagation();
+        const url = el.getAttribute('data-map-url');
+        if (url) window.open(url, '_blank', 'noopener,noreferrer');
+      };
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -833,38 +856,45 @@ class YandexBusCard extends YandexBusCardBase {
     if (data.missingEntity) {
       this._inner.innerHTML = `
         <div style="padding:16px; color:var(--error-color,#ef5350); font-family:var(--primary-font-family,sans-serif);">
-          Сущность <b>${data.missingEntity}</b> не найдена
+          Сущность <b>${esc(data.missingEntity)}</b> не найдена
         </div>`;
       return;
     }
 
-const ph = data.placePhoto || {};
-    const heroBg = ph.url ? `style="background-image:url('${ph.url}')"` : '';
+    const ph = data.placePhoto || {};
+    const safeHeroUrl = ph.url ? encodeURI(ph.url) : '';
+    const heroBg = safeHeroUrl ? `style="background-image:url('${safeHeroUrl}')"` : '';
+    const safeMapStopUrl = esc(data.mapStopUrl || '');
+    const safeStopName = esc(data.stopName);
+    const safePhLabel = esc(ph.label);
+
     const header = `
-      <div class="yb-hero ${ph.url ? '' : 'yb-hero-grad'}" ${heroBg}>
+      <div class="yb-hero ${safeHeroUrl ? '' : 'yb-hero-grad'}" ${heroBg}>
         <div class="yb-hero-shade"></div>
         <div class="yb-header">
-          <div class="yb-stop-title" onclick="window.open('${data.mapStopUrl}','_blank')">
+          <div class="yb-stop-title" data-map-url="${safeMapStopUrl}">
             <ha-icon icon="mdi:bus-stop"></ha-icon>
-            <span class="yb-title-text">${data.stopName}</span>
+            <span class="yb-title-text">${safeStopName}</span>
           </div>
           <div class="yb-clock">
             <span class="yb-live-dot"></span>
             <span data-yb-clock>${this._nowTime()}</span>
           </div>
         </div>
-        ${ph.label ? `<div class="yb-hero-label" title="Место остановки">${ph.label}</div>` : ''}
+        ${safePhLabel ? `<div class="yb-hero-label" title="Место остановки">${safePhLabel}</div>` : ''}
       </div>`;
 
     const rows = data.routes.map((r) => this._routeRow(r));
+    const maxHeight = this._config.max_height ? esc(this._config.max_height) : '';
     const listHtml = `
-      <div class="yb-list ${this._config.max_height ? 'scrollable' : ''}" style="${this._config.max_height ? '--yb-max-height:' + this._config.max_height + ';' : ''}">
+      <div class="yb-list ${maxHeight ? 'scrollable' : ''}" style="${maxHeight ? '--yb-max-height:' + maxHeight + ';' : ''}">
         ${data.routes.length === 0
           ? '<div class="yb-empty">Нет активных маршрутов</div>'
           : rows.join('')}
       </div>`;
 
     this._inner.innerHTML = this._renderShell(header, listHtml);
+    this._bindStopTitleClick();
     this._bindRouteClicks();
   }
 
@@ -944,15 +974,18 @@ class YandexBusPylonCard extends YandexBusCardBase {
     if (data.missingEntity) {
       this._inner.innerHTML = `
         <div style="padding:16px; color:var(--error-color,#ef4444); font-family:var(--primary-font-family,sans-serif);">
-          Сущность <b>${data.missingEntity}</b> не найдена
+          Сущность <b>${esc(data.missingEntity)}</b> не найдена
         </div>`;
       return;
     }
 
+    const safeMapStopUrl = esc(data.mapStopUrl || '');
+    const safeStopName = esc(data.stopName);
+
     const header = `
-      <div class="yb-stop-title yb-pylon-title" onclick="window.open('${data.mapStopUrl}','_blank')">
+      <div class="yb-stop-title yb-pylon-title" data-map-url="${safeMapStopUrl}">
         <ha-icon icon="mdi:bus-stop"></ha-icon>
-        <span class="yb-pylon-name">${data.stopName}</span>
+        <span class="yb-pylon-name">${safeStopName}</span>
       </div>
       <div style="display:flex; justify-content:flex-end; margin-top:8px;">
         <div class="yb-clock" style="font-size:13px;">
@@ -962,14 +995,16 @@ class YandexBusPylonCard extends YandexBusCardBase {
       </div>`;
 
     const rows = data.routes.map((r) => this._routeRow(r));
+    const maxHeight = this._config.max_height ? esc(this._config.max_height) : '';
     const listHtml = `
-      <div class="yb-list ${this._config.max_height ? 'scrollable' : ''}" style="${this._config.max_height ? '--yb-max-height:' + this._config.max_height + ';' : ''}">
+      <div class="yb-list ${maxHeight ? 'scrollable' : ''}" style="${maxHeight ? '--yb-max-height:' + maxHeight + ';' : ''}">
         ${data.routes.length === 0
           ? '<div class="yb-empty">Нет активных маршрутов</div>'
           : rows.join('')}
       </div>`;
 
     this._inner.innerHTML = this._renderShell(header, listHtml);
+    this._bindStopTitleClick();
     this._bindRouteClicks();
   }
 

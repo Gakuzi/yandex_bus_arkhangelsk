@@ -4,6 +4,11 @@
 Формат версий — [SemVer](https://semver.org/). Тег `vX.Y.Z` в HACS создаётся через
 `scripts/release.sh <версия>`.
 
+## [1.7.1] - 2026-10-26
+
+### Security
+- Экранирование HTML-символов (`esc`) для всех пользовательских и внешних данных в Lovelace-карточке (`data.stopName`, `route.route`, `status.time`, `data.missingEntity`, `ph.label`) для предотвращения XSS-уязвимостей.
+
 ## [1.7.0] - 2026-10-22
 
 ### Added
